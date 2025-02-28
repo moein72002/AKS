@@ -4,7 +4,7 @@ Our work has been accepted by CVPR2025!
 <h3>Adaptive Keyframe Sampling for Long Video Understanding </h3>
 
 
-The code will be released ASAP.
+We are currently in the process of code collection, with all codes expected to be finalized by March.
 
 
 ## Abstract
