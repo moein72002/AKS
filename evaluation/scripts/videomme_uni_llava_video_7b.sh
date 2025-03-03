@@ -1,0 +1,16 @@
+frame_num=64
+use_topk=False
+score_type=videomme_uni
+
+python ./evaluation/insert_frame_num.py \
+    --frame_num $frame_num \
+    --use_topk $use_topk
+
+CUDA_VISIBLE_DEVICES=0,1,2,3 accelerate launch --num_processes 4 --main_process_port 12345 -m lmms_eval \
+    --model llava_vid \
+    --model_args pretrained=./checkpoints/llava_video_7b,device_map=auto,conv_template=chatml_direct,video_decode_backend=decord,max_frames_num=64,overwrite=False,use_topk=False \
+    --tasks videomme \
+    --batch_size 1 \
+    --log_samples \
+    --log_samples_suffix llavavid_7b_qwen_lvb_v \
+    --output_path ./results/${score_type}
