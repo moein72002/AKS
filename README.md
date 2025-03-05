@@ -39,7 +39,7 @@ pip install spacy
 ```
 Then please use the [sevila.py](./sevila.py) to replace the raw SeViLA/lavis/models/sevila_models/sevila.py. 
 ```Shell
-python feature_extract.py --datasetname longvideobench --dataset_path ./datasets/longvideobench --extract_feature_model blip
+python feature_extract.py --dataset_name longvideobench --dataset_path ./datasets/longvideobench --extract_feature_model blip
 ```
 
 Because the decord function is slow to read the video, it is recommended to split this process into multiple parallel processes.
@@ -48,7 +48,7 @@ Since the process of  extracting feature takes a lot time, it is recommended to 
 
 To reuse video feature, it's better to save the video features (SeViLA not supported) rather than store the score directly. To achieve, please use the [blip_image_text_matching.py](./blip_image_text_matching.py) to replace the raw SeViLA/lavis/models/blip_models/blip_image_text_matching.py.
 ```Shell
-python feature_extract_store.py --datasetname longvideobench --dataset_path ./datasets/longvideobench --extract_feature_model blip
+python feature_extract_store.py --dataset_name longvideobench --dataset_path ./datasets/longvideobench --extract_feature_model blip
 ```
 ## Frame Selection
 After extracting the video feature, we use [frame_selcet.py](./feature_extract.py) to adaptively select video frames as LLM inputs. We also provide the selected in [outscores](./outscores).
