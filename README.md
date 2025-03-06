@@ -1,5 +1,5 @@
 # Adaptive Keyframe Sampling for Long Video Understanding 
-Our work has been accepted by CVPR2025!
+This is the official implementaion of paper '[***Adaptive Keyframe Sampling for Long Video Understanding***](https://arxiv.org/abs/2502.21271)', which is accepted in ***CVPR 2025***.
 We are currently in the process of code collection, with all codes expected to be finalized by March.
 
 
@@ -88,13 +88,10 @@ This project is based on BLIP ([paper](https://arxiv.org/pdf/2201.12086), [code]
 ## Citation
 If you find AKS useful for your research and applications, please cite using this BibTeX:
 ```
-@misc{tang2025adaptivekeyframesamplinglong,
-      title={Adaptive Keyframe Sampling for Long Video Understanding}, 
-      author={Xi Tang and Jihao Qiu and Lingxi Xie and Yunjie Tian and Jianbin Jiao and Qixiang Ye},
-      year={2025},
-      eprint={2502.21271},
-      archivePrefix={arXiv},
-      primaryClass={cs.CV},
-      url={https://arxiv.org/abs/2502.21271}, 
+@article{tang2025adaptive,
+  title={Adaptive Keyframe Sampling for Long Video Understanding},
+  author={Tang, Xi and Qiu, Jihao and Xie, Lingxi and Tian, Yunjie and Jiao, Jianbin and Ye, Qixiang},
+  journal={arXiv preprint arXiv:2502.21271},
+  year={2025}
 }
 ```
