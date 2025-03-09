@@ -72,7 +72,7 @@ cd LLaVA-NeXT
 pip install -e .
 ```
 
-To allow adaptive sampling video input, please use the [llava_vid.py](./evaluation/llava_vid.py) to replace the raw lmms_eval/models/llava_vid.py. For VideoMME，please replace the raw lmms_eval/tasks/videomme/videomme.yaml with this file [videomme.yaml](./datasets/videomme.yaml). hen you can run the following files to get the results. 
+To allow adaptive sampling video input, please use the [llava_vid.py](./evaluation/llava_vid.py) to replace the raw lmms_eval/models/llava_vid.py. For LongVideoBench，please replace the raw lmms_eval/tasks/longvideobench/longvideobench_val_v.yaml with this file [longvideobench_val_v.yaml](./datasets/longvideobench_val_v.yaml), and replace the raw lmms_eval/tasks/longvideobench/longvideobench_val_i.yaml with this file [longvideobench_val_i.yaml](./datasets/longvideobench_val_i.yaml).For VideoMME，please replace the raw lmms_eval/tasks/videomme/videomme.yaml with this file [videomme.yaml](./datasets/videomme.yaml). Then you can run the following files to get the results. 
 
 ```Shell
 bash ./evaluation/scripts/longvideobench_aks_llava_video_7b.sh
