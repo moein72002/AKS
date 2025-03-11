@@ -2,7 +2,7 @@ base_score_path=./selected_frames/longvideobench/blip
 score_type=videomme_32
 dataset_name=videomme
 
-python /home/QiuJihao/Workspace2/QiuJihao/video_memory/evaulation_code/change_score.py \
+python ./evaluation/change_score.py \
     --base_score_path $base_score_path \
     --score_type $score_type \
     --dataset_name $dataset_name 
@@ -10,7 +10,7 @@ python /home/QiuJihao/Workspace2/QiuJihao/video_memory/evaulation_code/change_sc
 frame_num=32
 use_topk=False
 
-python /home/QiuJihao/Workspace2/QiuJihao/video_memory/evaulation_code/insert_frame_num.py \
+python ./evaluation/insert_frame_num.py \
     --frame_num $frame_num \
     --use_topk $use_topk
 
