@@ -81,10 +81,10 @@ For VideoMME，please replace the raw lmms_eval/tasks/videomme/videomme.yaml wit
 Then you can run the following files to get the results. 
 
 ```Shell
-bash ./evaluation/scripts/longvideobench_aks_llava_video_7b.sh
-bash ./evaluation/scripts/longvideobench_uni_llava_video_7b.sh
-bash ./evaluation/scripts/videomme_aks_llava_video_7b.sh
-bash ./evaluation/scripts/videomme_uni_llava_video_7b.sh
+bash ./evaluation/scripts/llava_video_7b/longvideobench_aks_llava_video_7b.sh
+bash ./evaluation/scripts/llava_video_7b/longvideobench_uni_llava_video_7b.sh
+bash ./evaluation/scripts/llava_video_7b/videomme_aks_llava_video_7b.sh
+bash ./evaluation/scripts/llava_video_7b/videomme_uni_llava_video_7b.sh
 ```
 
 ## Acknowledgement
