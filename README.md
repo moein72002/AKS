@@ -92,7 +92,7 @@ bash ./evaluation/scripts/videomme_uni_llava_video_7b.sh
 This project is based on BLIP ([paper](https://arxiv.org/pdf/2201.12086), [code](https://github.com/salesforce/LAVIS)), SeViLA ([paper](https://arxiv.org/pdf/2305.06988), [code](https://github.com/Yui010206/SeViLA)),  LLaVA-NeXT ([paper](https://arxiv.org/abs/2410.02713), [code](https://github.com/LLaVA-VL/LLaVA-NeXT)), lmms_eval([paper](https://arxiv.org/abs/2407.12772), [code](https://github.com/EvolvingLMMs-Lab/lmms-eval)), thanks for their excellent works.
 
 ## Citation
-If you find AKS useful for your research and applications, please cite using this BibTeX:
+If you find AKS useful for your research and applications, please consider giving us a star ⭐ and citing it by the following BibTeX entry:
 ```
 @article{tang2025adaptive,
   title={Adaptive Keyframe Sampling for Long Video Understanding},
