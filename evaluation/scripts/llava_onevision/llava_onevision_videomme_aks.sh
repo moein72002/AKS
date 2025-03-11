@@ -21,4 +21,4 @@ CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 accelerate launch --num_processes 8 --main_
     --batch_size 1 \
     --log_samples \
     --log_samples_suffix llava_onevision_7b \
-    --output_path /home/QiuJihao/Workspace2/QiuJihao/video_memory/tangxi_cvpr_latest/other_model_test/llava_one_vision/videomme/${score_type}
+    --output_path ./results/llavaonevision/${score_type}
