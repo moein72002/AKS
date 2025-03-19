@@ -1,4 +1,4 @@
-base_score_path=./selected_frames/longvideobench/blip
+base_score_path=./selected_frames/videomme/blip
 score_type=selected_frames
 dataset_name=videomme
 
