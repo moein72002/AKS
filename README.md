@@ -29,8 +29,8 @@ For VideoMME, we provide a label [file](./datasets/videomme.json) which is modif
 We use the BLIP/CLIP/SeViLA to extract the frame feature. You can follow the instruction of [SeViLA](https://github.com/Yui010206/SeViLA) to install the enviroment.
 
 ```Shell
-conda create -n sevila python=3.9
-conda activate sevila
+conda create -n AKS python=3.9
+conda activate AKS
 git clone https://github.com/Yui010206/SeViLA.git
 cd SeViLA
 pip install -e .
@@ -58,7 +58,9 @@ python frame_select.py
 ```
 
 ## Evaluation
-We use LLaVA-Video-7B-Qwen2 as our baseline, which can be downloaded from [Hugging Face](https://huggingface.co/lmms-lab/LLaVA-Video-7B-Qwen2/tree/main). And you can put the checkpoints under this [path](./checkpoints/llava_video_7b/).
+We use LLaVA-Video-7B-Qwen2 as our baseline, which can be downloaded from [Hugging Face](https://huggingface.co/lmms-lab/LLaVA-Video-7B-Qwen2/tree/main). And you can put the checkpoints under this [path](./checkpoints/llava_video_7b/). 
+
+If you encouter "size mismatch for vision_model.embeddings.patch_embedding.weight", you can refer to this [issue](https://github.com/LLaVA-VL/LLaVA-NeXT/issues/246#issuecomment-2362829804) to solve it.
 
 We use the [lmms_eval](https://github.com/EvolvingLMMs-Lab/lmms-eval) library to evaluate performance. You can follow their instruction to install the evaluation enviroment.
 
@@ -74,9 +76,9 @@ pip install -e .
 
 To allow adaptive sampling video input, please use the [llava_vid.py](./evaluation/llava_vid.py) to replace the raw lmms_eval/models/llava_vid.py, and use the [task.py](./evaluation/task.py) to replace the raw lmms_eval/api/task.py
 
-For LongVideoBench，please replace the raw lmms_eval/tasks/longvideobench/longvideobench_val_v.yaml with this file [longvideobench_val_v.yaml](./datasets/longvideobench_val_v.yaml), and replace the raw lmms_eval/tasks/longvideobench/longvideobench_val_i.yaml with this file [longvideobench_val_i.yaml](./datasets/longvideobench_val_i.yaml).
+For LongVideoBench，please replace the raw longvideobench_val_v.yaml, longvideobench_val_i.yaml and [utils.py](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/lmms_eval/tasks/longvideobench/utils.py) in lmms_eval/tasks/longvideobench/ with [longvideobench_val_v.yaml](./datasets/longvideobench/longvideobench_val_v.yaml), [longvideobench_val_i.yaml](./datasets/longvideobench/longvideobench_val_i.yaml) and [utils.py](./datasets/longvideobench/utils.py)
 
-For VideoMME，please replace the raw lmms_eval/tasks/videomme/videomme.yaml with this file [videomme.yaml](./datasets/videomme.yaml). 
+For VideoMME，please replace the raw videomme.yaml and [utils.py](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/lmms_eval/tasks/videomme/utils.py) in lmms_eval/tasks/videomme/ with [videomme.yaml](./datasets/videomme/videomme.yaml) and [utils.py](./datasets/videomme/utils.py). 
 
 Then you can run the following files to get the results. 
 
