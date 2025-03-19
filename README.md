@@ -74,7 +74,7 @@ cd LLaVA-NeXT
 pip install -e .
 ```
 
-To allow adaptive sampling video input, please use the [llava_vid.py](./evaluation/llava_vid.py) to replace the raw lmms_eval/models/llava_vid.py, and use the [task.py](./evaluation/task.py) to replace the raw lmms_eval/api/task.py
+To allow adaptive sampling video input, please use the [llava_vid.py](./evaluation/llava_vid.py) to replace the raw lmms_eval/models/llava_vid.py, and use the [task.py](./evaluation/task.py) to replace the raw lmms_eval/api/task.py, and use the [evaluator.py](./evaluation/evaluator.py) to replace the raw lmms_eval/evaluator.py
 
 For LongVideoBench，please replace the raw longvideobench_val_v.yaml, longvideobench_val_i.yaml and [utils.py](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/lmms_eval/tasks/longvideobench/utils.py) in lmms_eval/tasks/longvideobench/ with [longvideobench_val_v.yaml](./datasets/longvideobench/longvideobench_val_v.yaml), [longvideobench_val_i.yaml](./datasets/longvideobench/longvideobench_val_i.yaml) and [utils.py](./datasets/longvideobench/utils.py)
 
