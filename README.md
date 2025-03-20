@@ -46,12 +46,12 @@ Because the decord function is slow to read the video, it is recommended to spli
 Since the process of  extracting feature takes a lot time, it is recommended to directly using our results in [outscores](./outscores/).
 
 
-To reuse video feature, it's better to save the video features (SeViLA not supported) rather than store the score directly. To achieve, please use the [blip_image_text_matching.py](./blip_image_text_matching.py) to replace the raw SeViLA/lavis/models/blip_models/blip_image_text_matching.py.
+To reuse video feature, it's better to save the video features (SeViLA not supported) rather than store the score directly. To achieve, please use [blip_image_text_matching.py](./blip_image_text_matching.py) to replace the raw SeViLA/lavis/models/blip_models/blip_image_text_matching.py.
 ```Shell
 python feature_extract_store.py --dataset_name longvideobench --dataset_path ./datasets/longvideobench --extract_feature_model blip
 ```
 ## Frame Selection
-After extracting the video feature, we use [frame_selcet.py](./feature_extract.py) to adaptively select video frames as LLM inputs. We also provide the selected in [outscores](./outscores).
+After extracting the video feature, we use [frame_selcet.py](./feature_extract.py) to adaptively select video frames as LLM inputs. We also provide the selected scores in [outscores](./outscores).
 
 ```Shell
 python frame_select.py
@@ -62,7 +62,7 @@ We use LLaVA-Video-7B-Qwen2 as our baseline, which can be downloaded from [Huggi
 
 If you encouter "size mismatch for vision_model.embeddings.patch_embedding.weight", you can refer to this [issue](https://github.com/LLaVA-VL/LLaVA-NeXT/issues/246#issuecomment-2362829804) to solve it.
 
-We use the [lmms_eval](https://github.com/EvolvingLMMs-Lab/lmms-eval) library to evaluate performance. You can follow their instruction to install the evaluation enviroment.
+We use [lmms_eval](https://github.com/EvolvingLMMs-Lab/lmms-eval) library to evaluate performance. You can follow their instruction to install the evaluation enviroment.
 
 ```Shell
 git clone https://github.com/EvolvingLMMs-Lab/lmms-eval
@@ -74,7 +74,7 @@ cd LLaVA-NeXT
 pip install -e .
 ```
 
-To allow adaptive sampling video input, please use the [llava_vid.py](./evaluation/llava_vid.py) to replace the raw lmms_eval/models/llava_vid.py, and use the [task.py](./evaluation/task.py) to replace the raw lmms_eval/api/task.py, and use the [evaluator.py](./evaluation/evaluator.py) to replace the raw lmms_eval/evaluator.py
+To allow adaptive sampling video input, please use [llava_vid.py](./evaluation/llava_vid.py) to replace the raw lmms_eval/models/llava_vid.py, use [task.py](./evaluation/task.py) to replace the raw lmms_eval/api/task.py, and use [evaluator.py](./evaluation/evaluator.py) to replace the raw lmms_eval/evaluator.py
 
 For LongVideoBench，please replace the raw longvideobench_val_v.yaml, longvideobench_val_i.yaml and [utils.py](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/lmms_eval/tasks/longvideobench/utils.py) in lmms_eval/tasks/longvideobench/ with [longvideobench_val_v.yaml](./datasets/longvideobench/longvideobench_val_v.yaml), [longvideobench_val_i.yaml](./datasets/longvideobench/longvideobench_val_i.yaml) and [utils.py](./datasets/longvideobench/utils.py)
 
@@ -89,6 +89,7 @@ bash ./evaluation/scripts/llava_video_7b/videomme_aks_llava_video_7b.sh
 bash ./evaluation/scripts/llava_video_7b/videomme_uni_llava_video_7b.sh
 ```
 
+For evaluating with LLaVA OneVision, please download the checkpoint from [HuggingFace](https://huggingface.co/lmms-lab/llava-onevision-qwen2-7b-ov), replace the raw lmms_eval/models/llava_onevision.py with [llavaone_vision.py](./evaluation/llava_onevision.py), and replace the raw LLaVA-NeXT/llava/mm_utils.py with [mm_utils.py](./evaluation/mm_utils.py).
 ## Acknowledgement
 
 This project is based on BLIP ([paper](https://arxiv.org/pdf/2201.12086), [code](https://github.com/salesforce/LAVIS)), SeViLA ([paper](https://arxiv.org/pdf/2305.06988), [code](https://github.com/Yui010206/SeViLA)),  LLaVA-NeXT ([paper](https://arxiv.org/abs/2410.02713), [code](https://github.com/LLaVA-VL/LLaVA-NeXT)), lmms_eval([paper](https://arxiv.org/abs/2407.12772), [code](https://github.com/EvolvingLMMs-Lab/lmms-eval)), thanks for their excellent works.
