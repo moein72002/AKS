@@ -2,7 +2,7 @@ dataset_path: ./datasets/longvideobench
 dataset_kwargs:
   data_files: {"validation" : include_frame_idx.json}
   token: False
-  cache_dir: LongVideoBench
+  cache_dir: longvideobench
   video: False
   force_download: False
   local_files_only: False
