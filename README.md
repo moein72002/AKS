@@ -29,8 +29,8 @@ For VideoMME, we provide a label [file](./datasets/videomme.json) which is modif
 We use the BLIP/CLIP/SeViLA to extract the frame feature. You can follow the instruction of [SeViLA](https://github.com/Yui010206/SeViLA) to install the enviroment.
 
 ```Shell
-conda create -n AKS python=3.9
-conda activate AKS
+conda create -n SeViLA python=3.9
+conda activate SeViLA
 git clone https://github.com/Yui010206/SeViLA.git
 cd SeViLA
 pip install -e .
@@ -65,12 +65,14 @@ If you encouter "size mismatch for vision_model.embeddings.patch_embedding.weigh
 We use [lmms_eval](https://github.com/EvolvingLMMs-Lab/lmms-eval) library to evaluate performance. You can follow their instruction to install the evaluation enviroment.
 
 ```Shell
-git clone https://github.com/EvolvingLMMs-Lab/lmms-eval
-cd lmms-eval
-pip install -e .
-cd ..
+conda create -n AKS python=3.9
+conda activate AKS
 git clone https://github.com/LLaVA-VL/LLaVA-NeXT
 cd LLaVA-NeXT
+pip install -e ".[train]"
+cd ..
+git clone https://github.com/EvolvingLMMs-Lab/lmms-eval
+cd lmms-eval
 pip install -e .
 ```
 
