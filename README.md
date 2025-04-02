@@ -1,6 +1,5 @@
 # Adaptive Keyframe Sampling for Long Video Understanding 
 This is the official implementaion of paper '[***Adaptive Keyframe Sampling for Long Video Understanding***](https://arxiv.org/abs/2502.21271)', which is accepted in ***CVPR 2025***.
-We are currently in the process of code collection, with all codes expected to be finalized by March.
 
 
 ## Abstract
