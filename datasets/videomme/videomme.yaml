@@ -2,7 +2,7 @@ dataset_path: ./datasets/videomme/
 dataset_kwargs:
   data_files: {"test" : include_frame_idx.json}
   token: False
-  cache_dir: video_mme
+  cache_dir: videomme
   video: False
   # From_YouTube: True
 task: videomme
