@@ -61,6 +61,8 @@ We use LLaVA-Video-7B-Qwen2 as our baseline, which can be downloaded from [Huggi
 
 If you encouter "size mismatch for vision_model.embeddings.patch_embedding.weight", you can refer to this [issue](https://github.com/LLaVA-VL/LLaVA-NeXT/issues/246#issuecomment-2362829804) to solve it.
 
+Please make sure that the folder name of the checkpoints is "LLaVA-NeXT-Video-7B-Qwen2", otherwise it may load the model incorrectly. Special thanks to [@JonnesLin](https://github.com/JonnesLin) for his comments.
+
 We use [lmms_eval](https://github.com/EvolvingLMMs-Lab/lmms-eval) library to evaluate performance. You can follow their instruction to install the evaluation enviroment.
 
 ```Shell
