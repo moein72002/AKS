@@ -93,6 +93,20 @@ bash ./evaluation/scripts/llava_video_7b/videomme_uni_llava_video_7b.sh
 ```
 
 For evaluating with LLaVA OneVision, please download the checkpoint from [HuggingFace](https://huggingface.co/lmms-lab/llava-onevision-qwen2-7b-ov), replace the raw lmms_eval/models/llava_onevision.py with [llavaone_vision.py](./evaluation/llava_onevision.py), and replace the raw LLaVA-NeXT/llava/mm_utils.py with [mm_utils.py](./evaluation/mm_utils.py).
+
+For evaluating with Qwen2-VL-7B-Instruct, please download the checkpoint from [HuggingFace](https://huggingface.co/Qwen/Qwen2-VL-7B-Instruct), replace the raw lmms_eval/models/qwen2_vl.py with [qwen2_vl.py](./evaluation/qwen2_vl.py), and put [qwen2_load_video.py](./evaluation/qwen2_load_video.py) lmms_eval/lmms_eval/models/model_utils. Also, please do the following configuration in the environment.
+
+```Shell
+pip install qwen-vl-utils
+pip install flash-attn --no-build-isolation
+```
+
+If you're having trouble installing flash-attn, you can download the xhl file from [Github](https://github.com/Dao-AILab/flash-attention/releases) to install it according to your environment information. On our server we used the following version for installation.
+
+```Shell
+pip install flash_attn-2.7.3+cu11torch2.1cxx11abiFALSE-cp39-cp39-linux_x86_64.whl --no-build-isolation
+```
+
 ## Acknowledgement
 
 This project is based on BLIP ([paper](https://arxiv.org/pdf/2201.12086), [code](https://github.com/salesforce/LAVIS)), SeViLA ([paper](https://arxiv.org/pdf/2305.06988), [code](https://github.com/Yui010206/SeViLA)),  LLaVA-NeXT ([paper](https://arxiv.org/abs/2410.02713), [code](https://github.com/LLaVA-VL/LLaVA-NeXT)), lmms_eval([paper](https://arxiv.org/abs/2407.12772), [code](https://github.com/EvolvingLMMs-Lab/lmms-eval)), thanks for their excellent works.
