@@ -81,7 +81,7 @@ To allow adaptive sampling video input, please use [llava_vid.py](./evaluation/l
 
 For LongVideoBench，please replace the raw longvideobench_val_v.yaml, longvideobench_val_i.yaml and [utils.py](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/lmms_eval/tasks/longvideobench/utils.py) in lmms_eval/tasks/longvideobench/ with [longvideobench_val_v.yaml](./datasets/longvideobench/longvideobench_val_v.yaml), [longvideobench_val_i.yaml](./datasets/longvideobench/longvideobench_val_i.yaml) and [utils.py](./datasets/longvideobench/utils.py)
 
-For VideoMME，please replace the raw videomme.yaml and [utils.py](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/lmms_eval/tasks/videomme/utils.py) in lmms_eval/tasks/videomme/ with [videomme.yaml](./datasets/videomme/videomme.yaml) and [utils.py](./datasets/videomme/utils.py). 
+For VideoMME，please delete the [README.md](https://huggingface.co/datasets/lmms-lab/Video-MME/blob/main/README.md), and replace the raw videomme.yaml and [utils.py](https://github.com/EvolvingLMMs-Lab/lmms-eval/blob/main/lmms_eval/tasks/videomme/utils.py) in lmms_eval/tasks/videomme/ with [videomme.yaml](./datasets/videomme/videomme.yaml) and [utils.py](./datasets/videomme/utils.py). 
 
 Then you can run the following files to get the results. 
 
