@@ -1,0 +1,31 @@
+[project]
+name = "aks-keyframe-extraction"
+version = "1.0.0"
+description = "Adaptive Keyframe Sampling for video processing"
+requires-python = ">=3.8"
+dependencies = [
+    "torch>=2.0.0",
+    "torchvision",
+    "torchaudio",
+    "numpy>=1.24.4",
+    "Pillow>=9.0.0",
+    "opencv-python>=4.8.0",
+    "matplotlib>=3.5.0",
+    "salesforce-lavis",
+    "transformers",
+    "requests",
+]
+
+[tool.setuptools]
+packages = []
+
+[tool.uv]
+dev-dependencies = [
+    "pytest>=7.0.0",
+    "black>=22.0.0",
+    "flake8>=4.0.0",
+]
+
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"

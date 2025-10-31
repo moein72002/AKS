@@ -1,6 +1,49 @@
-# Adaptive Keyframe Sampling for Long Video Understanding 
+# Adaptive Keyframe Sampling for Long Video Understanding
 This is the official implementaion of paper '[***Adaptive Keyframe Sampling for Long Video Understanding***](https://arxiv.org/abs/2502.21271)', which is accepted in ***CVPR 2025***.
 
+## Quick Start - Video Keyframe Extraction
+
+This repository has been modified to support automatic keyframe extraction from MP4 videos. Simply place your videos in a `videos/` folder and run the extraction pipeline.
+
+### Installation
+
+1. **Clone the repository and navigate to it:**
+   ```bash
+   git clone https://github.com/ncTimTang/AKS.git
+   cd AKS
+   ```
+
+2. **Install dependencies:**
+   - **Windows:** Run `install.bat`
+   - **Linux/Mac:** Run `chmod +x install.sh && ./install.sh`
+   - **Manual:** `uv pip install -r requirements.txt`
+
+### Usage
+
+1. **Place your MP4 videos in the `videos/` folder**
+
+2. **Run feature extraction:**
+   ```bash
+   uv run python feature_extract.py --video_dir ./videos --output_dir ./outscores
+   ```
+
+3. **Run keyframe selection:**
+   ```bash
+   uv run python frame_select.py --video_dir ./videos --scores_dir ./outscores --output_dir ./selected_frames
+   ```
+
+The system will automatically:
+- Extract features from all MP4 files in the videos folder
+- Select optimal keyframes using the AKS algorithm
+- Save selected frames as JPEG images
+- Generate plots showing the keyframe selection process
+
+### GPU Support
+
+The scripts automatically detect available hardware:
+- Uses CUDA GPU if available
+- Falls back to CPU if GPU is not available
+- You can manually specify device with `--device cuda` or `--device cpu`
 
 ## Abstract
 

@@ -1,0 +1,15 @@
+---
+alwaysApply: true
+---
+
+# Very Important Rules
+
+## Run everything using uv and inside a .venv
+
+## Do not do sth that I didn't ask you to do it.
+
+## If you are not sure about your task, ask me to clarify the task for you. 
+
+## All MDC files should be inside .cursor/rules/ directory.
+
+## Always install dependencies from requirements.txt
