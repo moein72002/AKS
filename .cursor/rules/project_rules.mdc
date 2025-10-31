@@ -13,3 +13,5 @@ alwaysApply: true
 ## All MDC files should be inside .cursor/rules/ directory.
 
 ## Always install dependencies from requirements.txt
+
+## Before doing sth, tell me what you wanna do.
