@@ -1,4 +1,5 @@
 ## Quick Commands
+- `python -m venv .venv` — create a virtual environment on Kaggle/Unix if `uv venv` isn’t available
 - `.venv\Scripts\activate` — activate the venv on Windows PowerShell/CMD
 - `source .venv/bin/activate` — activate the venv on WSL/Linux/macOS
 - `uv sync` — install all dependencies (requirements + pyproject)
