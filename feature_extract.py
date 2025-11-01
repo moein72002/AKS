@@ -11,7 +11,7 @@ from PIL import Image
 from lavis.models import load_model_and_preprocess
 
 
-DEFAULT_PROMPT = "ساعت مچی طرح خودرو مردانه"
+DEFAULT_PROMPT = "What is the advertised product?"
 
 try:
     RESIZE_RESAMPLE = Image.Resampling.BILINEAR
