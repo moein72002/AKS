@@ -5,9 +5,12 @@ from __future__ import annotations
 
 import argparse
 import json
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Sequence, Tuple
+
+import time
 
 import cv2
 import numpy as np
@@ -66,6 +69,12 @@ def parse_arguments() -> argparse.Namespace:
         type=str,
         default=DEFAULT_PROMPT,
         help="Text prompt for BLIP image-text matching",
+    )
+    parser.add_argument(
+        "--num_threads",
+        type=int,
+        default=2,
+        help="Number of worker threads to use for CPU inference (default: 2)",
     )
     return parser.parse_args()
 
@@ -126,9 +135,17 @@ class BlipOnnxPipeline:
         tokenizer_dir: Path,
         providers: Sequence[str] | None = None,
         provider_options: Sequence[Dict[str, str]] | None = None,
+        num_threads: int | None = None,
     ) -> None:
+        session_options = ort.SessionOptions()
+        if num_threads is not None and num_threads > 0:
+            session_options.intra_op_num_threads = num_threads
+            session_options.inter_op_num_threads = num_threads
+            if num_threads > 1:
+                session_options.execution_mode = ort.ExecutionMode.ORT_PARALLEL
         self.session = ort.InferenceSession(
             str(model_path),
+            sess_options=session_options,
             providers=list(providers) if providers else ["CPUExecutionProvider"],
             provider_options=list(provider_options) if provider_options else None,
         )
@@ -230,7 +247,7 @@ def extract_scores_for_video(
     text_inputs: Dict[str, np.ndarray],
     video_path: Path,
     stride: int,
-) -> Tuple[List[int], List[float]]:
+) -> Tuple[List[int], List[float], float]:
     print(f"Processing {video_path.name} (stride={stride})")
 
     cap = cv2.VideoCapture(str(video_path))
@@ -239,28 +256,59 @@ def extract_scores_for_video(
 
     frame_indices: List[int] = []
     scores: List[float] = []
+    futures: List[tuple[int, "Future[float]"]] = []
 
-    frame_idx = 0
-    while True:
-        ret, frame = cap.read()
-        if not ret:
-            break
+    start = time.perf_counter()
 
-        if frame_idx % stride == 0:
-            frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            pil_image = Image.fromarray(frame_rgb)
-            score = pipeline.predict_score(pil_image, text_inputs)
-            scores.append(score)
-            frame_indices.append(frame_idx)
+    max_workers = max(1, getattr(pipeline.session, "get_session_options", lambda: None)() if False else 0)
+    num_threads = max_workers  # placeholder to satisfy linter (will be replaced below)
 
-        frame_idx += 1
+    # Determine number of threads from session options (fallback to 1)
+    try:
+        session_options = pipeline.session._sess.options  # type: ignore[attr-defined]
+    except AttributeError:
+        session_options = None
+    if session_options is not None:
+        num_threads = max(1, getattr(session_options, "intra_op_num_threads", 0) or 1)
+    else:
+        num_threads = 1
+
+    with ThreadPoolExecutor(max_workers=num_threads) as executor:
+        frame_idx = 0
+        while True:
+            ret, frame = cap.read()
+            if not ret:
+                break
+
+            if frame_idx % stride == 0:
+                frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                pil_image = Image.fromarray(frame_rgb)
+                futures.append((frame_idx, executor.submit(pipeline.predict_score, pil_image, text_inputs)))
+
+            frame_idx += 1
+
+    for frame_idx, future in futures:
+        score = float(future.result())
+        frame_indices.append(frame_idx)
+        scores.append(score)
 
     cap.release()
-    print(f"Sampled {len(frame_indices)} frame(s) from {video_path.name}")
-    return frame_indices, scores
+    elapsed = time.perf_counter() - start
+    frame_indices_sorted, scores_sorted = zip(*sorted(zip(frame_indices, scores))) if frame_indices else ([], [])
+    frame_indices = list(frame_indices_sorted)
+    scores = list(scores_sorted)
+    print(f"Sampled {len(frame_indices)} frame(s) from {video_path.name} in {elapsed:.2f}s")
+    return frame_indices, scores, elapsed
 
 
-def save_scores(output_dir: Path, base_name: str, video_name: str, frame_indices: List[int], scores: List[float]) -> None:
+def save_scores(
+    output_dir: Path,
+    base_name: str,
+    video_name: str,
+    frame_indices: List[int],
+    scores: List[float],
+    processing_time: float | None = None,
+) -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
     output_path = output_dir / f"{base_name}_scores.json"
     payload = {
@@ -268,6 +316,8 @@ def save_scores(output_dir: Path, base_name: str, video_name: str, frame_indices
         "frame_indices": frame_indices,
         "itc_scores": scores,
     }
+    if processing_time is not None:
+        payload["processing_time_seconds"] = processing_time
     with output_path.open("w", encoding="utf-8") as fp:
         json.dump(payload, fp, indent=2)
     print(f"Saved scores to {output_path}")
@@ -280,11 +330,14 @@ def main() -> None:
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
+    num_threads = max(1, args.num_threads)
+
     pipeline = BlipOnnxPipeline(
         model_path=Path(args.onnx_model),
         metadata_path=Path(args.metadata_json),
         tokenizer_dir=Path(args.tokenizer_dir),
         providers=args.providers,
+        num_threads=num_threads,
     )
     text_inputs = pipeline.preprocess_text(args.prompt)
 
@@ -296,8 +349,21 @@ def main() -> None:
             cap.release()
             stride = sample_stride(fps)
 
-            frame_indices, scores = extract_scores_for_video(pipeline, text_inputs, video_path, stride)
-            save_scores(output_dir, video_path.stem, video_path.name, frame_indices, scores)
+            frame_indices, scores, elapsed = extract_scores_for_video(
+                pipeline, text_inputs, video_path, stride
+            )
+            save_scores(
+                output_dir,
+                video_path.stem,
+                video_path.name,
+                frame_indices,
+                scores,
+                processing_time=elapsed,
+            )
+            print(
+                f"Finished {video_path.name}: {len(frame_indices)} frames scored in {elapsed:.2f}s "
+                f"using {num_threads} thread(s)"
+            )
         except Exception as exc:  # noqa: BLE001
             print(f"Failed to process {video_path.name}: {exc}")
 

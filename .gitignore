@@ -34,3 +34,5 @@ selected_frames/
 
 # uv cache
 .uv/
+
+blip_itm_large_onnx/
