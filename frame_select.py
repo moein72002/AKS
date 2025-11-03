@@ -36,7 +36,7 @@ def parse_arguments() -> argparse.Namespace:
     parser.add_argument(
         "--score_source",
         choices=["json", "onnx"],
-        default="json",
+        default="onnx",
         help="Source of BLIP scores: precomputed JSON files or on-the-fly ONNX inference",
     )
     parser.add_argument(
