@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
-"""Select keyframes from BLIP scores and save frames/plots."""
+"""Select keyframes from BLIP scores (JSON or ONNX pipeline) and save frames/plots."""
+
+from __future__ import annotations
 
 import argparse
 import heapq
 import json
 import time
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Dict, Iterable, List, Tuple
 
 import cv2
 import matplotlib
@@ -14,6 +16,11 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 matplotlib.use("Agg")
+
+DEFAULT_PROMPT = "What is the advertised product?"
+DEFAULT_ONNX_MODEL = "./blip_itm_large_onnx/blip_itm_large.onnx"
+DEFAULT_METADATA_JSON = "./blip_itm_large_onnx/preprocessing_metadata.json"
+DEFAULT_TOKENIZER_DIR = "./blip_itm_large_onnx/tokenizer"
 
 
 def parse_arguments() -> argparse.Namespace:
@@ -26,6 +33,48 @@ def parse_arguments() -> argparse.Namespace:
     parser.add_argument("--t1", type=float, default=0.8, help="AKS threshold t1")
     parser.add_argument("--t2", type=float, default=-100, help="AKS threshold t2")
     parser.add_argument("--all_depth", type=int, default=5, help="AKS recursion depth")
+    parser.add_argument(
+        "--score_source",
+        choices=["json", "onnx"],
+        default="json",
+        help="Source of BLIP scores: precomputed JSON files or on-the-fly ONNX inference",
+    )
+    parser.add_argument(
+        "--prompt",
+        type=str,
+        default=DEFAULT_PROMPT,
+        help="Prompt for ONNX scoring (used when --score_source=onnx)",
+    )
+    parser.add_argument(
+        "--onnx_model",
+        type=str,
+        default=DEFAULT_ONNX_MODEL,
+        help="Path to the exported BLIP ITM ONNX model",
+    )
+    parser.add_argument(
+        "--metadata_json",
+        type=str,
+        default=DEFAULT_METADATA_JSON,
+        help="Path to preprocessing metadata JSON saved alongside the ONNX model",
+    )
+    parser.add_argument(
+        "--tokenizer_dir",
+        type=str,
+        default=DEFAULT_TOKENIZER_DIR,
+        help="Directory containing the tokenizer assets saved with the ONNX export",
+    )
+    parser.add_argument(
+        "--providers",
+        type=str,
+        nargs="+",
+        default=["CPUExecutionProvider"],
+        help="ONNX Runtime execution providers to use when score_source=onnx",
+    )
+    parser.add_argument(
+        "--save_scores",
+        action="store_true",
+        help="When score_source=onnx, also save *_scores.json outputs to --scores_dir",
+    )
     return parser.parse_args()
 
 
@@ -236,21 +285,18 @@ def plot_scores(
     plt.close(fig)
 
 
-def process_scores_file(score_file: Path, args: argparse.Namespace) -> None:
-    with score_file.open("r", encoding="utf-8") as fp:
-        data = json.load(fp)
-
-    video_name = data.get("video_name")
-    frame_indices = data.get("frame_indices", [])
-    scores = data.get("itc_scores", [])
-
-    base_name = Path(video_name).stem if video_name else score_file.stem.replace("_scores", "")
-    video_path = Path(args.video_dir) / video_name
+def process_scores_payload(
+    video_path: Path,
+    frame_indices: List[int],
+    scores: List[float],
+    args: argparse.Namespace,
+    source_label: str,
+) -> None:
     if not video_path.exists():
-        print(f"Warning: Skipping {score_file.name} because video {video_path} was not found")
+        print(f"Warning: Skipping {video_path.name} because source video was not found")
         return
 
-    output_dir = Path(args.output_dir) / base_name
+    output_dir = Path(args.output_dir) / video_path.stem
     output_dir.mkdir(parents=True, exist_ok=True)
 
     top_pairs = sorted(zip(frame_indices, scores), key=lambda pair: pair[1], reverse=True)[:5]
@@ -264,19 +310,17 @@ def process_scores_file(score_file: Path, args: argparse.Namespace) -> None:
     elapsed = time.perf_counter() - start_time
 
     summary_path = output_dir / "selected_frames.json"
+    summary_payload = {
+        "video_name": video_path.name,
+        "scores_source": source_label,
+        "scores_file": source_label,
+        "selected_frame_indices": selected_indices,
+        "saved_frames": saved_frames,
+        "top_score_frame_indices": top_score_indices,
+        "selection_time_seconds": elapsed,
+    }
     with summary_path.open("w", encoding="utf-8") as fp:
-        json.dump(
-            {
-                "video_name": video_name,
-                "scores_file": score_file.name,
-                "selected_frame_indices": selected_indices,
-                "saved_frames": saved_frames,
-                "top_score_frame_indices": top_score_indices,
-                "selection_time_seconds": elapsed,
-            },
-            fp,
-            indent=2,
-        )
+        json.dump(summary_payload, fp, indent=2)
 
     plot_path = output_dir / "keyframe_plot.png"
     plot_scores(
@@ -285,17 +329,31 @@ def process_scores_file(score_file: Path, args: argparse.Namespace) -> None:
         selected_indices,
         top_frame_data,
         plot_path,
-        f"AKS Keyframe Selection for {video_name}",
+        f"AKS Keyframe Selection for {video_path.name}",
         elapsed,
     )
 
-    print(f"Processed {video_name}: selected {len(saved_frames)} frame(s)")
+    print(f"Processed {video_path.name}: selected {len(saved_frames)} frame(s)")
     print(f"Saved frames and plot under {output_dir}")
 
 
-def main() -> None:
-    args = parse_arguments()
+def process_scores_file(score_file: Path, args: argparse.Namespace) -> None:
+    with score_file.open("r", encoding="utf-8") as fp:
+        data = json.load(fp)
 
+    video_name = data.get("video_name")
+    frame_indices = data.get("frame_indices", [])
+    scores = data.get("itc_scores", [])
+
+    if not video_name:
+        print(f"Warning: {score_file.name} does not contain a video_name; skipping")
+        return
+
+    video_path = Path(args.video_dir) / video_name
+    process_scores_payload(video_path, frame_indices, scores, args, score_file.name)
+
+
+def run_with_json_scores(args: argparse.Namespace) -> None:
     scores_dir = Path(args.scores_dir)
     if not scores_dir.exists():
         raise FileNotFoundError(f"Scores directory does not exist: {scores_dir}")
@@ -312,6 +370,59 @@ def main() -> None:
             process_scores_file(score_file, args)
         except Exception as exc:  # noqa: BLE001
             print(f"Failed to process {score_file.name}: {exc}")
+
+
+def iterate_videos(video_dir: Path) -> Iterable[Path]:
+    return sorted(video_dir.glob("*.mp4"))
+
+
+def run_with_onnx(args: argparse.Namespace) -> None:
+    from feature_extract import (  # Imported lazily to avoid mandatory dependency when unused
+        BlipOnnxPipeline,
+        extract_scores_for_video,
+        sample_stride,
+        save_scores,
+    )
+
+    video_dir = Path(args.video_dir)
+    videos = list(iterate_videos(video_dir))
+    if not videos:
+        print(f"No MP4 files found in {video_dir.resolve()}")
+        return
+
+    pipeline = BlipOnnxPipeline(
+        model_path=Path(args.onnx_model),
+        metadata_path=Path(args.metadata_json),
+        tokenizer_dir=Path(args.tokenizer_dir),
+        providers=args.providers,
+    )
+    text_inputs = pipeline.preprocess_text(args.prompt)
+
+    for video_path in videos:
+        try:
+            cap = cv2.VideoCapture(str(video_path))
+            fps = cap.get(cv2.CAP_PROP_FPS)
+            cap.release()
+            stride = sample_stride(fps)
+
+            frame_indices, scores = extract_scores_for_video(pipeline, text_inputs, video_path, stride)
+
+            if args.save_scores:
+                scores_dir = Path(args.scores_dir)
+                scores_dir.mkdir(parents=True, exist_ok=True)
+                save_scores(scores_dir, video_path.stem, video_path.name, frame_indices, scores)
+
+            process_scores_payload(video_path, frame_indices, scores, args, "onnx_runtime")
+        except Exception as exc:  # noqa: BLE001
+            print(f"Failed to process {video_path.name}: {exc}")
+
+
+def main() -> None:
+    args = parse_arguments()
+    if args.score_source == "json":
+        run_with_json_scores(args)
+    else:
+        run_with_onnx(args)
 
 
 if __name__ == "__main__":

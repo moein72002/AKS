@@ -7,9 +7,12 @@ Pillow>=9.0.0
 opencv-python>=4.8.0
 matplotlib>=3.5.0
 
-# LAVIS library for BLIP model
+# BLIP inference (PyTorch + LAVIS legacy path)
 salesforce-lavis
 
-# Optional: for CLIP model support
-transformers
+# Hugging Face tokenizer + ONNX Runtime pipeline
+transformers>=4.30.0
+onnxruntime>=1.17.0
+
+# Optional utilities
 requests
