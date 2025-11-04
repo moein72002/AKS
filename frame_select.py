@@ -18,9 +18,19 @@ import numpy as np
 matplotlib.use("Agg")
 
 DEFAULT_PROMPT = "What is the advertised product?"
-DEFAULT_ONNX_MODEL = "./blip_itm_large_onnx/blip_itm_large.onnx"
-DEFAULT_METADATA_JSON = "./blip_itm_large_onnx/preprocessing_metadata.json"
-DEFAULT_TOKENIZER_DIR = "./blip_itm_large_onnx/tokenizer"
+
+MODEL_VARIANTS = {
+    "base": {
+        "onnx_model": Path("./blip_itm_base_onnx/blip_itm_base.onnx"),
+        "metadata": Path("./blip_itm_base_onnx/preprocessing_metadata.json"),
+        "tokenizer": Path("./blip_itm_base_onnx/tokenizer"),
+    },
+    "large": {
+        "onnx_model": Path("./blip_itm_large_onnx/blip_itm_large.onnx"),
+        "metadata": Path("./blip_itm_large_onnx/preprocessing_metadata.json"),
+        "tokenizer": Path("./blip_itm_large_onnx/tokenizer"),
+    },
+}
 
 
 def parse_arguments() -> argparse.Namespace:
@@ -40,6 +50,12 @@ def parse_arguments() -> argparse.Namespace:
         help="Source of BLIP scores: precomputed JSON files or on-the-fly ONNX inference",
     )
     parser.add_argument(
+        "--model_variant",
+        choices=tuple(MODEL_VARIANTS.keys()),
+        default="large",
+        help="Which BLIP ONNX variant to use when score_source=onnx",
+    )
+    parser.add_argument(
         "--prompt",
         type=str,
         default=DEFAULT_PROMPT,
@@ -48,20 +64,20 @@ def parse_arguments() -> argparse.Namespace:
     parser.add_argument(
         "--onnx_model",
         type=str,
-        default=DEFAULT_ONNX_MODEL,
-        help="Path to the exported BLIP ITM ONNX model",
+        default=None,
+        help="Override path to the exported BLIP ITM ONNX model",
     )
     parser.add_argument(
         "--metadata_json",
         type=str,
-        default=DEFAULT_METADATA_JSON,
-        help="Path to preprocessing metadata JSON saved alongside the ONNX model",
+        default=None,
+        help="Override path to preprocessing metadata JSON saved alongside the ONNX model",
     )
     parser.add_argument(
         "--tokenizer_dir",
         type=str,
-        default=DEFAULT_TOKENIZER_DIR,
-        help="Directory containing the tokenizer assets saved with the ONNX export",
+        default=None,
+        help="Override directory containing the tokenizer assets saved with the ONNX export",
     )
     parser.add_argument(
         "--providers",
@@ -384,6 +400,11 @@ def run_with_onnx(args: argparse.Namespace) -> None:
         save_scores,
     )
 
+    variant_config = MODEL_VARIANTS.get(args.model_variant, MODEL_VARIANTS["large"])
+    model_path = Path(args.onnx_model) if args.onnx_model else variant_config["onnx_model"]
+    metadata_path = Path(args.metadata_json) if args.metadata_json else variant_config["metadata"]
+    tokenizer_dir = Path(args.tokenizer_dir) if args.tokenizer_dir else variant_config["tokenizer"]
+
     video_dir = Path(args.video_dir)
     videos = list(iterate_videos(video_dir))
     if not videos:
@@ -391,9 +412,9 @@ def run_with_onnx(args: argparse.Namespace) -> None:
         return
 
     pipeline = BlipOnnxPipeline(
-        model_path=Path(args.onnx_model),
-        metadata_path=Path(args.metadata_json),
-        tokenizer_dir=Path(args.tokenizer_dir),
+        model_path=model_path,
+        metadata_path=metadata_path,
+        tokenizer_dir=tokenizer_dir,
         providers=args.providers,
     )
     text_inputs = pipeline.preprocess_text(args.prompt)

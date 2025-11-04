@@ -5,12 +5,9 @@ from __future__ import annotations
 
 import argparse
 import json
-from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Sequence, Tuple
-
-import time
 
 import cv2
 import numpy as np
@@ -20,9 +17,19 @@ from transformers import AutoTokenizer
 
 
 DEFAULT_PROMPT = "What is the advertised product?"
-DEFAULT_ONNX_MODEL = "./blip_itm_large_onnx/blip_itm_large.onnx"
-DEFAULT_METADATA_JSON = "./blip_itm_large_onnx/preprocessing_metadata.json"
-DEFAULT_TOKENIZER_DIR = "./blip_itm_large_onnx/tokenizer"
+
+MODEL_VARIANTS = {
+    "base": {
+        "onnx_model": Path("./blip_itm_base_onnx/blip_itm_base.onnx"),
+        "metadata": Path("./blip_itm_base_onnx/preprocessing_metadata.json"),
+        "tokenizer": Path("./blip_itm_base_onnx/tokenizer"),
+    },
+    "large": {
+        "onnx_model": Path("./blip_itm_large_onnx/blip_itm_large.onnx"),
+        "metadata": Path("./blip_itm_large_onnx/preprocessing_metadata.json"),
+        "tokenizer": Path("./blip_itm_large_onnx/tokenizer"),
+    },
+}
 
 try:
     RESIZE_RESAMPLE = Image.Resampling.BILINEAR
@@ -40,22 +47,28 @@ def parse_arguments() -> argparse.Namespace:
         help="Directory to save per-video score JSON files",
     )
     parser.add_argument(
+        "--model_variant",
+        choices=tuple(MODEL_VARIANTS.keys()),
+        default="large",
+        help="Which BLIP ONNX variant to use (determines default model/metadata/tokenizer paths)",
+    )
+    parser.add_argument(
         "--onnx_model",
         type=str,
-        default=DEFAULT_ONNX_MODEL,
-        help="Path to the exported BLIP ITM ONNX model",
+        default=None,
+        help="Override path to the exported BLIP ITM ONNX model",
     )
     parser.add_argument(
         "--metadata_json",
         type=str,
-        default=DEFAULT_METADATA_JSON,
-        help="Path to preprocessing metadata JSON saved alongside the ONNX model",
+        default=None,
+        help="Override path to preprocessing metadata JSON saved alongside the ONNX model",
     )
     parser.add_argument(
         "--tokenizer_dir",
         type=str,
-        default=DEFAULT_TOKENIZER_DIR,
-        help="Directory containing the tokenizer assets saved with the ONNX export",
+        default=None,
+        help="Override directory containing the tokenizer assets saved with the ONNX export",
     )
     parser.add_argument(
         "--providers",
@@ -69,12 +82,6 @@ def parse_arguments() -> argparse.Namespace:
         type=str,
         default=DEFAULT_PROMPT,
         help="Text prompt for BLIP image-text matching",
-    )
-    parser.add_argument(
-        "--num_threads",
-        type=int,
-        default=2,
-        help="Number of worker threads to use for CPU inference (default: 2)",
     )
     return parser.parse_args()
 
@@ -135,17 +142,9 @@ class BlipOnnxPipeline:
         tokenizer_dir: Path,
         providers: Sequence[str] | None = None,
         provider_options: Sequence[Dict[str, str]] | None = None,
-        num_threads: int | None = None,
     ) -> None:
-        session_options = ort.SessionOptions()
-        if num_threads is not None and num_threads > 0:
-            session_options.intra_op_num_threads = num_threads
-            session_options.inter_op_num_threads = num_threads
-            if num_threads > 1:
-                session_options.execution_mode = ort.ExecutionMode.ORT_PARALLEL
         self.session = ort.InferenceSession(
             str(model_path),
-            sess_options=session_options,
             providers=list(providers) if providers else ["CPUExecutionProvider"],
             provider_options=list(provider_options) if provider_options else None,
         )
@@ -247,7 +246,7 @@ def extract_scores_for_video(
     text_inputs: Dict[str, np.ndarray],
     video_path: Path,
     stride: int,
-) -> Tuple[List[int], List[float], float]:
+) -> Tuple[List[int], List[float]]:
     print(f"Processing {video_path.name} (stride={stride})")
 
     cap = cv2.VideoCapture(str(video_path))
@@ -256,59 +255,28 @@ def extract_scores_for_video(
 
     frame_indices: List[int] = []
     scores: List[float] = []
-    futures: List[tuple[int, "Future[float]"]] = []
 
-    start = time.perf_counter()
+    frame_idx = 0
+    while True:
+        ret, frame = cap.read()
+        if not ret:
+            break
 
-    max_workers = max(1, getattr(pipeline.session, "get_session_options", lambda: None)() if False else 0)
-    num_threads = max_workers  # placeholder to satisfy linter (will be replaced below)
+        if frame_idx % stride == 0:
+            frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            pil_image = Image.fromarray(frame_rgb)
+            score = pipeline.predict_score(pil_image, text_inputs)
+            scores.append(score)
+            frame_indices.append(frame_idx)
 
-    # Determine number of threads from session options (fallback to 1)
-    try:
-        session_options = pipeline.session._sess.options  # type: ignore[attr-defined]
-    except AttributeError:
-        session_options = None
-    if session_options is not None:
-        num_threads = max(1, getattr(session_options, "intra_op_num_threads", 0) or 1)
-    else:
-        num_threads = 1
-
-    with ThreadPoolExecutor(max_workers=num_threads) as executor:
-        frame_idx = 0
-        while True:
-            ret, frame = cap.read()
-            if not ret:
-                break
-
-            if frame_idx % stride == 0:
-                frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                pil_image = Image.fromarray(frame_rgb)
-                futures.append((frame_idx, executor.submit(pipeline.predict_score, pil_image, text_inputs)))
-
-            frame_idx += 1
-
-    for frame_idx, future in futures:
-        score = float(future.result())
-        frame_indices.append(frame_idx)
-        scores.append(score)
+        frame_idx += 1
 
     cap.release()
-    elapsed = time.perf_counter() - start
-    frame_indices_sorted, scores_sorted = zip(*sorted(zip(frame_indices, scores))) if frame_indices else ([], [])
-    frame_indices = list(frame_indices_sorted)
-    scores = list(scores_sorted)
-    print(f"Sampled {len(frame_indices)} frame(s) from {video_path.name} in {elapsed:.2f}s")
-    return frame_indices, scores, elapsed
+    print(f"Sampled {len(frame_indices)} frame(s) from {video_path.name}")
+    return frame_indices, scores
 
 
-def save_scores(
-    output_dir: Path,
-    base_name: str,
-    video_name: str,
-    frame_indices: List[int],
-    scores: List[float],
-    processing_time: float | None = None,
-) -> None:
+def save_scores(output_dir: Path, base_name: str, video_name: str, frame_indices: List[int], scores: List[float]) -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
     output_path = output_dir / f"{base_name}_scores.json"
     payload = {
@@ -316,8 +284,6 @@ def save_scores(
         "frame_indices": frame_indices,
         "itc_scores": scores,
     }
-    if processing_time is not None:
-        payload["processing_time_seconds"] = processing_time
     with output_path.open("w", encoding="utf-8") as fp:
         json.dump(payload, fp, indent=2)
     print(f"Saved scores to {output_path}")
@@ -330,14 +296,16 @@ def main() -> None:
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    num_threads = max(1, args.num_threads)
+    variant_config = MODEL_VARIANTS.get(args.model_variant, MODEL_VARIANTS["large"])
+    model_path = Path(args.onnx_model) if args.onnx_model else variant_config["onnx_model"]
+    metadata_path = Path(args.metadata_json) if args.metadata_json else variant_config["metadata"]
+    tokenizer_dir = Path(args.tokenizer_dir) if args.tokenizer_dir else variant_config["tokenizer"]
 
     pipeline = BlipOnnxPipeline(
-        model_path=Path(args.onnx_model),
-        metadata_path=Path(args.metadata_json),
-        tokenizer_dir=Path(args.tokenizer_dir),
+        model_path=model_path,
+        metadata_path=metadata_path,
+        tokenizer_dir=tokenizer_dir,
         providers=args.providers,
-        num_threads=num_threads,
     )
     text_inputs = pipeline.preprocess_text(args.prompt)
 
@@ -349,21 +317,8 @@ def main() -> None:
             cap.release()
             stride = sample_stride(fps)
 
-            frame_indices, scores, elapsed = extract_scores_for_video(
-                pipeline, text_inputs, video_path, stride
-            )
-            save_scores(
-                output_dir,
-                video_path.stem,
-                video_path.name,
-                frame_indices,
-                scores,
-                processing_time=elapsed,
-            )
-            print(
-                f"Finished {video_path.name}: {len(frame_indices)} frames scored in {elapsed:.2f}s "
-                f"using {num_threads} thread(s)"
-            )
+            frame_indices, scores = extract_scores_for_video(pipeline, text_inputs, video_path, stride)
+            save_scores(output_dir, video_path.stem, video_path.name, frame_indices, scores)
         except Exception as exc:  # noqa: BLE001
             print(f"Failed to process {video_path.name}: {exc}")
 
