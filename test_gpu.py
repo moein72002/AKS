@@ -1,5 +1,7 @@
 import torch
 
+print("Starting GPU test...")
+
 if torch.cuda.is_available():
     print("✅ CUDA (GPU) is available!")
     

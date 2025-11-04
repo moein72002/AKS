@@ -5,7 +5,9 @@ from __future__ import annotations
 
 import argparse
 import json
+import time
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Sequence, Tuple
 
@@ -35,6 +37,11 @@ try:
     RESIZE_RESAMPLE = Image.Resampling.BILINEAR
 except AttributeError:  # Pillow < 9.1
     RESIZE_RESAMPLE = Image.BILINEAR
+
+
+def log(message: str) -> None:
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    print(f"[{timestamp}] {message}")
 
 
 def parse_arguments() -> argparse.Namespace:
@@ -143,10 +150,17 @@ class BlipOnnxPipeline:
         providers: Sequence[str] | None = None,
         provider_options: Sequence[Dict[str, str]] | None = None,
     ) -> None:
+        log("Initializing ONNX Runtime session…")
+        init_start = time.perf_counter()
         self.session = ort.InferenceSession(
             str(model_path),
             providers=list(providers) if providers else ["CPUExecutionProvider"],
             provider_options=list(provider_options) if provider_options else None,
+        )
+        init_elapsed = time.perf_counter() - init_start
+        log(
+            "ONNX Runtime session ready | providers=%s | init_time=%.2fs"
+            % (self.session.get_providers(), init_elapsed)
         )
 
         with metadata_path.open("r", encoding="utf-8") as fp:
@@ -235,9 +249,16 @@ class BlipOnnxPipeline:
         return outputs[0]
 
     def predict_score(self, image: Image.Image, text_inputs: Dict[str, np.ndarray]) -> float:
+        preprocess_start = time.perf_counter()
         pixel_values = self.preprocess_image(image)
+        preprocess_time = time.perf_counter() - preprocess_start
         logits = self.run(pixel_values, text_inputs)[0]
         probs = softmax(logits)
+        inference_time = time.perf_counter() - preprocess_start
+        log(
+            "Frame scored | preprocess=%.3fs | total=%.3fs"
+            % (preprocess_time, inference_time)
+        )
         return float(probs[1])
 
 
@@ -254,7 +275,8 @@ def extract_scores_for_video(
     video_path: Path,
     stride: int,
 ) -> Tuple[List[int], List[float]]:
-    print(f"Processing {video_path.name} (stride={stride})")
+    log(f"Processing {video_path.name} | stride={stride}")
+    start_time = time.perf_counter()
 
     cap = cv2.VideoCapture(str(video_path))
     if not cap.isOpened():
@@ -279,7 +301,16 @@ def extract_scores_for_video(
         frame_idx += 1
 
     cap.release()
-    print(f"Sampled {len(frame_indices)} frame(s) from {video_path.name}")
+    elapsed = time.perf_counter() - start_time
+    log(
+        "Finished %s | sampled_frames=%d | elapsed=%.2fs | fps=%.2f"
+        % (
+            video_path.name,
+            len(frame_indices),
+            elapsed,
+            (len(frame_indices) / elapsed) if elapsed else 0.0,
+        )
+    )
     return frame_indices, scores
 
 
@@ -293,7 +324,7 @@ def save_scores(output_dir: Path, base_name: str, video_name: str, frame_indices
     }
     with output_path.open("w", encoding="utf-8") as fp:
         json.dump(payload, fp, indent=2)
-    print(f"Saved scores to {output_path}")
+    log(f"Saved scores -> {output_path}")
 
 
 def main() -> None:
@@ -309,17 +340,27 @@ def main() -> None:
     tokenizer_dir = Path(args.tokenizer_dir) if args.tokenizer_dir else variant_config["tokenizer"]
     providers = args.providers if args.providers else detect_default_providers()
 
+    log(
+        "Starting feature extraction | model_variant=%s"
+        % args.model_variant
+    )
+    setup_start = time.perf_counter()
     pipeline = BlipOnnxPipeline(
         model_path=model_path,
         metadata_path=metadata_path,
         tokenizer_dir=tokenizer_dir,
         providers=providers,
     )
+    setup_elapsed = time.perf_counter() - setup_start
+    log(f"Pipeline ready | setup_time={setup_elapsed:.2f}s")
     text_inputs = pipeline.preprocess_text(args.prompt)
+    log("Prompt tokenized")
 
     videos = load_videos(video_dir)
+    overall_start = time.perf_counter()
     for video_path in videos:
         try:
+            video_start = time.perf_counter()
             cap = cv2.VideoCapture(str(video_path))
             fps = cap.get(cv2.CAP_PROP_FPS)
             cap.release()
@@ -327,8 +368,14 @@ def main() -> None:
 
             frame_indices, scores = extract_scores_for_video(pipeline, text_inputs, video_path, stride)
             save_scores(output_dir, video_path.stem, video_path.name, frame_indices, scores)
+            log(
+                "Video completed | name=%s | total_time=%.2fs"
+                % (video_path.name, time.perf_counter() - video_start)
+            )
         except Exception as exc:  # noqa: BLE001
-            print(f"Failed to process {video_path.name}: {exc}")
+            log(f"Failed to process {video_path.name}: {exc}")
+
+    log(f"All videos processed | total_elapsed={time.perf_counter() - overall_start:.2f}s")
 
 
 if __name__ == "__main__":

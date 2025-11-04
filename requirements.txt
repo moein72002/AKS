@@ -25,5 +25,13 @@ packaging
 regex
 typing_extensions
 safetensors
+Flask>=3.0.0
+gunicorn>=21.2.0
+
+pyparsing
+cycler
+python-dateutil
+kiwisolver
+
 # Optional utilities
 requests
