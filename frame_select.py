@@ -330,10 +330,10 @@ def process_scores_payload(
         "video_name": video_path.name,
         "scores_source": source_label,
         "scores_file": source_label,
-        "selected_frame_indices": selected_indices,
-        "saved_frames": saved_frames,
-        "top_score_frame_indices": top_score_indices,
-        "selection_time_seconds": elapsed,
+                "selected_frame_indices": selected_indices,
+                "saved_frames": saved_frames,
+                "top_score_frame_indices": top_score_indices,
+                "selection_time_seconds": elapsed,
     }
     with summary_path.open("w", encoding="utf-8") as fp:
         json.dump(summary_payload, fp, indent=2)
@@ -396,6 +396,7 @@ def run_with_onnx(args: argparse.Namespace) -> None:
     from feature_extract import (  # Imported lazily to avoid mandatory dependency when unused
         BlipOnnxPipeline,
         extract_scores_for_video,
+        detect_default_providers,
         sample_stride,
         save_scores,
     )
@@ -411,11 +412,13 @@ def run_with_onnx(args: argparse.Namespace) -> None:
         print(f"No MP4 files found in {video_dir.resolve()}")
         return
 
+    providers = args.providers if args.providers else detect_default_providers()
+
     pipeline = BlipOnnxPipeline(
         model_path=model_path,
         metadata_path=metadata_path,
         tokenizer_dir=tokenizer_dir,
-        providers=args.providers,
+        providers=providers,
     )
     text_inputs = pipeline.preprocess_text(args.prompt)
 

@@ -74,8 +74,8 @@ def parse_arguments() -> argparse.Namespace:
         "--providers",
         type=str,
         nargs="+",
-        default=["CPUExecutionProvider"],
-        help="ONNX Runtime execution providers to use (default: CPUExecutionProvider)",
+        default=None,
+        help="ONNX Runtime execution providers to use. Defaults to CUDAExecutionProvider if available, otherwise CPU.",
     )
     parser.add_argument(
         "--prompt",
@@ -241,6 +241,13 @@ class BlipOnnxPipeline:
         return float(probs[1])
 
 
+def detect_default_providers() -> List[str]:
+    available = ort.get_available_providers()
+    if "CUDAExecutionProvider" in available:
+        return ["CUDAExecutionProvider", "CPUExecutionProvider"]
+    return ["CPUExecutionProvider"]
+
+
 def extract_scores_for_video(
     pipeline: BlipOnnxPipeline,
     text_inputs: Dict[str, np.ndarray],
@@ -300,12 +307,13 @@ def main() -> None:
     model_path = Path(args.onnx_model) if args.onnx_model else variant_config["onnx_model"]
     metadata_path = Path(args.metadata_json) if args.metadata_json else variant_config["metadata"]
     tokenizer_dir = Path(args.tokenizer_dir) if args.tokenizer_dir else variant_config["tokenizer"]
+    providers = args.providers if args.providers else detect_default_providers()
 
     pipeline = BlipOnnxPipeline(
         model_path=model_path,
         metadata_path=metadata_path,
         tokenizer_dir=tokenizer_dir,
-        providers=args.providers,
+        providers=providers,
     )
     text_inputs = pipeline.preprocess_text(args.prompt)
 
